@@ -39,23 +39,23 @@ export default function Metrics({ metrics, loading, error }: MetricsProps) {
         </div>
 
         <div className="metric-card approved">
-          <span className="metric-label">Approved</span>
+          <span className="metric-label">Approved Count</span>
           <strong className="metric-value" data-testid="metric-approved">
-            {loading ? '...' : formatCurrency(metrics?.approved_amount)}
+            {loading ? '...' : formatCount(metrics?.by_status.approved)}
           </strong>
         </div>
 
         <div className="metric-card submitted">
-          <span className="metric-label">Submitted</span>
+          <span className="metric-label">Submitted Count</span>
           <strong className="metric-value" data-testid="metric-submitted">
-            {loading ? '...' : formatCurrency(metrics?.submitted_amount)}
+            {loading ? '...' : formatCount(metrics?.by_status.submitted)}
           </strong>
         </div>
 
         <div className="metric-card draft">
-          <span className="metric-label">Draft</span>
+          <span className="metric-label">Draft Count</span>
           <strong className="metric-value" data-testid="metric-draft">
-            {loading ? '...' : formatCurrency(metrics?.draft_amount)}
+            {loading ? '...' : formatCount(metrics?.by_status.draft)}
           </strong>
         </div>
       </div>

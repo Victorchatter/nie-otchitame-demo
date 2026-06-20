@@ -26,9 +26,6 @@ export interface ReportCreate {
 export interface Metrics {
   total_count: number;
   total_amount: number;
-  approved_amount: number;
-  submitted_amount: number;
-  draft_amount: number;
-  by_type: Record<string, number>;
-  by_status: Record<string, number>;
+  by_type: Record<ReportType, number>;
+  by_status: Record<Status, number>;
 }

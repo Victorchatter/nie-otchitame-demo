@@ -1,6 +1,6 @@
 import { Report, ReportCreate, Metrics } from '../types';
 
-const API_URL = `${import.meta.env.VITE_API_URL || '/api/v1'}`;
+const API_URL = `${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api/v1' : '/api/v1')}`;
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -22,6 +22,11 @@ async function fetchJson<T>(path: string, options?: RequestInit): Promise<T> {
   if (!response.ok) {
     const body = await response.text();
     throw new ApiError(response.status, body || response.statusText);
+  }
+
+  // DELETE /reports/{id} returns 204 No Content.
+  if (response.status === 204) {
+    return undefined as unknown as T;
   }
 
   return response.json() as Promise<T>;
