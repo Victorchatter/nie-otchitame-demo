@@ -1,0 +1,75 @@
+# ПРОЕКТ-ДЖОБС / Nie Otchitame — local orchestration
+# Stack: React/Vite frontend, FastAPI backend, PostgreSQL, Nginx reverse proxy
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: nie-otchitame-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nie_otchitame}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nie_otchitame_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-nie_otchitame}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nie_otchitame} -d ${POSTGRES_DB:-nie_otchitame}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - nie-otchitame-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nie-otchitame-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://nie_otchitame:nie_otchitame_dev@db:5432/nie_otchitame}
+      BACKEND_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nie-otchitame-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nie-otchitame-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - nie-otchitame-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: nie-otchitame-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./devops/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - nie-otchitame-net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  nie-otchitame-net:
+    driver: bridge

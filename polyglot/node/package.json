@@ -1,0 +1,21 @@
+{
+  "name": "nie-otchitame-seed-reports",
+  "version": "1.0.0",
+  "description": "Node.js seeding utility for the Nie Otchitame demo backend.",
+  "type": "module",
+  "main": "seed_reports.js",
+  "scripts": {
+    "start": "node seed_reports.js"
+  },
+  "keywords": [
+    "nie-otchitame",
+    "demo",
+    "seed",
+    "fastapi"
+  ],
+  "author": "Polyglot Agent",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

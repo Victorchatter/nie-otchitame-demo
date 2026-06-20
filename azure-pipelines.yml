@@ -1,0 +1,180 @@
+# Azure DevOps pipeline for ПРОЕКТ-ДЖОБС / Nie Otchitame
+# Stages: install & lint, test (backend + frontend), build images, push to registry
+
+trigger:
+  - main
+  - develop
+
+pr:
+  - main
+
+variables:
+  pythonVersion: '3.12'
+  nodeVersion: '20.x'
+  dockerRegistryServiceConnection: 'nie-otchitame-registry'   # configure in Azure DevOps
+  imageRepositoryBackend: 'nie-otchitame-backend'
+  imageRepositoryFrontend: 'nie-otchitame-frontend'
+  tag: '$(Build.BuildId)'
+  vmImageName: 'ubuntu-latest'
+
+stages:
+  - stage: InstallAndLint
+    displayName: 'Install & Lint'
+    jobs:
+      - job: BackendLint
+        displayName: 'Backend Lint'
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: $(pythonVersion)
+            displayName: 'Use Python $(pythonVersion)'
+
+          - script: |
+              cd backend
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+              pip install ruff
+            displayName: 'Install backend dependencies'
+
+          - script: |
+              cd backend
+              ruff check .
+            displayName: 'Run Ruff lint'
+
+      - job: FrontendLint
+        displayName: 'Frontend Lint'
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Use Node.js $(nodeVersion)'
+
+          - script: |
+              cd frontend
+              npm ci
+            displayName: 'Install frontend dependencies'
+
+          - script: |
+              cd frontend
+              npm run lint
+            displayName: 'Run ESLint'
+
+  - stage: Test
+    displayName: 'Run Tests'
+    dependsOn: InstallAndLint
+    jobs:
+      - job: BackendTests
+        displayName: 'Backend Pytest'
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: $(pythonVersion)
+            displayName: 'Use Python $(pythonVersion)'
+
+          - script: |
+              cd backend
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+              pip install -r requirements-dev.txt
+            displayName: 'Install backend deps'
+
+          - script: |
+              cd backend
+              pytest tests/ -v --cov=app --cov-report=xml --cov-report=term
+            displayName: 'Run pytest'
+
+          - task: PublishTestResults@2
+            inputs:
+              testResultsFiles: 'backend/junit.xml'
+              testRunTitle: 'Backend Pytest'
+            condition: succeededOrFailed()
+
+      - job: FrontendTests
+        displayName: 'Frontend Playwright'
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(nodeVersion)
+            displayName: 'Use Node.js $(nodeVersion)'
+
+          - script: |
+              cd frontend
+              npm ci
+            displayName: 'Install frontend dependencies'
+
+          - script: |
+              cd frontend
+              npx playwright install --with-deps
+            displayName: 'Install Playwright browsers'
+
+          - script: |
+              cd frontend
+              npm run test:e2e
+            displayName: 'Run Playwright E2E tests'
+
+  - stage: Build
+    displayName: 'Build Docker Images'
+    dependsOn: Test
+    jobs:
+      - job: BuildImages
+        displayName: 'Build Backend & Frontend'
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: Docker@2
+            displayName: 'Build backend image'
+            inputs:
+              command: build
+              dockerfile: 'backend/Dockerfile'
+              repository: $(imageRepositoryBackend)
+              tags: |
+                $(tag)
+                latest
+
+          - task: Docker@2
+            displayName: 'Build frontend image'
+            inputs:
+              command: build
+              dockerfile: 'frontend/Dockerfile'
+              repository: $(imageRepositoryFrontend)
+              tags: |
+                $(tag)
+                latest
+
+  - stage: Push
+    displayName: 'Push to Container Registry'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: PushImages
+        displayName: 'Push Images'
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: Docker@2
+            displayName: 'Push backend image'
+            inputs:
+              command: push
+              containerRegistry: $(dockerRegistryServiceConnection)
+              repository: $(imageRepositoryBackend)
+              tags: |
+                $(tag)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push frontend image'
+            inputs:
+              command: push
+              containerRegistry: $(dockerRegistryServiceConnection)
+              repository: $(imageRepositoryFrontend)
+              tags: |
+                $(tag)
+                latest

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+*.log
+.pytest_cache/
+.mypy_cache/
+
+# Node / React / Vite
+node_modules/
+dist/
+build/
+*.local
+.vite/
+coverage/
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.iml
+.idea/
+
+# PHP
+vendor/
+
+# IDEs
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+
+# Docker / K8s
+.env.production
+secrets/

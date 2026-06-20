@@ -1,0 +1,20 @@
+[Unit]
+Description=Nie Otchitame Docker Compose stack
+Documentation=https://github.com/example/nie-otchitame
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/nie-otchitame
+Environment="COMPOSE_PROJECT_NAME=nieotchitame"
+
+# Adjust path to docker-compose.yml and .env as needed on the host.
+ExecStartPre=-/usr/bin/docker compose -f /opt/nie-otchitame/docker-compose.yml down --remove-orphans
+ExecStart=/usr/bin/docker compose -f /opt/nie-otchitame/docker-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f /opt/nie-otchitame/docker-compose.yml down
+ExecReload=/usr/bin/docker compose -f /opt/nie-otchitame/docker-compose.yml up -d --build
+
+[Install]
+WantedBy=multi-user.target
